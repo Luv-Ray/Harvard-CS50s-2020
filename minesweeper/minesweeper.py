@@ -101,6 +101,14 @@ class Sentence():
     def __str__(self):
         return f"{self.cells} = {self.count}"
 
+    def include(self, sentence):
+        if self.count < sentence.count:
+            return False
+        for cell in sentence.cells:
+            if cell in self.cells:
+                return False
+        return True
+
     def known_mines(self):
         """
         Returns the set of all cells in self.cells known to be mines.
@@ -195,7 +203,7 @@ class MinesweeperAI():
         self.mark_safe(cell)
         # 3)
         h, w = cell
-        cells = set()
+        new_cells = set()
         for i in range(h - 1, h + 2):
             for j in range(w - 1, w + 2):
                 tcell = i, j
@@ -203,11 +211,38 @@ class MinesweeperAI():
                     continue
                 if tcell in self.safes or tcell in self.mines:
                     continue
-                cells.add(tcell)
-        sentence = Sentence(cells, count)
-        self.knowledge.append(sentence)
+                new_cells.add(tcell)
+        new_sentence = Sentence(new_cells, count)
+        self.knowledge.append(new_sentence)
         # 4)
-
+        mines = sentence.known_mines
+        safes = sentence.known_safes
+        for sentence in self.knowledge:
+            for mine in mines:
+                sentence.mark_mine(mine)
+            for safe in safes:
+                sentence.mark_safe(safe)
+        # 5)
+        new_knowledge = []
+        for sentence in self.knowledge:
+            if sentence.include(new_sentence):
+                cells = set()
+                for cell in sentence:
+                    if cell in new_sentence:
+                        continue
+                    cells.add(cell)
+                tsentence = Sentence(cells, sentence.count - new_sentence.count)
+                new_knowledge.append(tsentence)
+            if new_sentence.include(sentence):
+                cells = set()
+                for cell in new_sentence:
+                    if cell in sentence:
+                        continue
+                    cells.add(cell)
+                tsentence = Sentence(cells, new_sentence.count - sentence.count)
+                new_knowledge.append(tsentence)
+        for sentence in new_knowledge:
+            self.knowledge.append(sentence)
 
     def make_safe_move(self):
         """
